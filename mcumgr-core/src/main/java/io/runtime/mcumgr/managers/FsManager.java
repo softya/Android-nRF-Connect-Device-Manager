@@ -21,8 +21,10 @@ import io.runtime.mcumgr.exception.InsufficientMtuException;
 import io.runtime.mcumgr.exception.McuMgrErrorException;
 import io.runtime.mcumgr.exception.McuMgrException;
 import io.runtime.mcumgr.response.DownloadResponse;
+import io.runtime.mcumgr.response.McuMgrResponse;
 import io.runtime.mcumgr.response.UploadResponse;
 import io.runtime.mcumgr.response.fs.McuMgrFsDownloadResponse;
+import io.runtime.mcumgr.response.fs.McuMgrFsStatusResponse;
 import io.runtime.mcumgr.response.fs.McuMgrFsUploadResponse;
 import io.runtime.mcumgr.transfer.Download;
 import io.runtime.mcumgr.transfer.DownloadCallback;
@@ -38,6 +40,7 @@ public class FsManager extends TransferManager {
     private final static Logger LOG = LoggerFactory.getLogger(FsManager.class);
 
     private final static int ID_FILE = 0;
+    private final static int ID_STATUS = 1;
 
     /**
      * Construct a McuManager instance.
@@ -132,6 +135,14 @@ public class FsManager extends TransferManager {
         return send(OP_WRITE, ID_FILE, payloadMap, SHORT_TIMEOUT, McuMgrFsUploadResponse.class);
     }
 
+    @NotNull
+    public McuMgrFsStatusResponse fileStatus(@NotNull String name)
+            throws McuMgrException {
+        HashMap<String, Object> payloadMap = new HashMap<>();
+        payloadMap.put("name", name);
+        return send(OP_READ, ID_STATUS, payloadMap, SHORT_TIMEOUT, McuMgrFsStatusResponse.class);
+    }
+
     /*
      * Build the upload payload map.
      */
@@ -177,8 +188,8 @@ public class FsManager extends TransferManager {
      * @see TransferController
      */
     @NotNull
-    public TransferController fileUpload(@NotNull String name, byte @NotNull [] data, @NotNull UploadCallback callback) {
-        return startUpload(new FileUpload(name, data, callback));
+    public TransferController fileUpload(@NotNull String name, byte @NotNull [] data, int offset, @NotNull UploadCallback callback) {
+        return startUpload(new FileUpload(name, data, offset, callback));
     }
 
     /**
@@ -188,6 +199,11 @@ public class FsManager extends TransferManager {
 
         @NotNull
         private final String mName;
+
+        protected FileUpload(@NotNull String name, byte @NotNull [] data, int offset, @NotNull UploadCallback callback) {
+            super(data, callback, offset);
+            mName = name;
+        }
 
         protected FileUpload(@NotNull String name, byte @NotNull [] data, @NotNull UploadCallback callback) {
             super(data, callback);
@@ -630,7 +646,7 @@ public class FsManager extends TransferManager {
                     size -= 2; // (offset = 0 requires just 1 byte, and we added 3 above)
                     size += 4 + 5; // "len": 0x636C656E + len (as 32-bit positive integer, worse case scenario)
                 }
-                return size + 8; // 8 additional bytes for the SMP header
+                return size + 10; // 8 additional bytes for the SMP header
             }
         } catch (IOException e) {
             LOG.error("Error while calculating packet overhead", e);
