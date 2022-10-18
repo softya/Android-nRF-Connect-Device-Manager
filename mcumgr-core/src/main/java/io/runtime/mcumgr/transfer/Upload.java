@@ -18,6 +18,11 @@ public abstract class Upload extends Transfer {
         this(data, null);
     }
 
+    protected Upload(byte @NotNull [] data, @Nullable UploadCallback callback, int offset) {
+        super(data, offset);
+        mCallback = callback;
+    }
+
     protected Upload(byte @NotNull [] data, @Nullable UploadCallback callback) {
         super(data);
         mCallback = callback;
@@ -43,7 +48,7 @@ public abstract class Upload extends Transfer {
 
     @Override
     public void reset() {
-        mOffset = 0;
+        //mOffset = 0;
     }
 
     @Override

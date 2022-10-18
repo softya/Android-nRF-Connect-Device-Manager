@@ -16,6 +16,7 @@ import io.runtime.mcumgr.McuMgrTransport;
 import io.runtime.mcumgr.ble.McuMgrBleTransport;
 import io.runtime.mcumgr.exception.McuMgrException;
 import io.runtime.mcumgr.managers.FsManager;
+import io.runtime.mcumgr.response.fs.McuMgrFsStatusResponse;
 import io.runtime.mcumgr.sample.viewmodel.SingleLiveEvent;
 import io.runtime.mcumgr.transfer.TransferController;
 import io.runtime.mcumgr.transfer.UploadCallback;
@@ -98,7 +99,16 @@ public class FilesUploadViewModel extends McuMgrViewModel implements UploadCallb
         requestHighConnectionPriority();
         setLoggingEnabled(false);
         initialBytes = 0;
-        controller = manager.fileUpload(path, data, this);
+
+        int offset = 0;
+        try {
+            McuMgrFsStatusResponse r = manager.fileStatus(path);
+            offset = r.len;
+        } catch (McuMgrException e) {
+            e.printStackTrace();
+        }
+
+        controller = manager.fileUpload(path, data, offset, this);
     }
 
     public void pause() {
